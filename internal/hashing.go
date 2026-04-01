@@ -18,16 +18,9 @@ func Hashing(cmd *cobra.Command, args []string) {
 	fmt.Println(hashStr)
 }
 
-func writeObject() {
-	
-}
-
 // Creates the SHA-1 and encodes it to create key essentially
-func ObjectHashing(objectType Blob, content string) string{
-
-	header := fmt.Sprintf("%s %d\x00", objectType, len(content))
-	store := header + content
-
+func ObjectHashing(store string) string{
+	
 	hash := sha1.Sum([]byte(store))
 	hashStr := hex.EncodeToString(hash[:])
 

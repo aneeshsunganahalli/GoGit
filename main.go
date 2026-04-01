@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 
 	"github.com/aneeshsunganahalli/GoGit/cmd"
 	"github.com/aneeshsunganahalli/GoGit/internal"
@@ -10,7 +10,8 @@ import (
 func main() {
 
 	cmd.Execute()
-	var b internal.Blob
-	str := internal.ObjectHashing(b, "Hello")
-	fmt.Println(str)
+	// str := internal.ObjectHashing("Hello")
+	// fmt.Println(str)
+	// fmt.Println(str[:2])
+	internal.WriteObject("blob", "Hello Worlds")
 }

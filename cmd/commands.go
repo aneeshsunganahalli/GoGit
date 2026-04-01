@@ -10,8 +10,8 @@ import (
 var initCmd = &cobra.Command {
 	Use: "init",
 	Short: "Initialize .git",
-	// Run: internal.Initialize,
-	Run: internal.Hashing,
+	Run: internal.Initialize,
+	// Run: internal.Hashing,
 }
 
 var addCmd = &cobra.Command{
