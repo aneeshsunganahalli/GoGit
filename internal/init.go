@@ -32,6 +32,8 @@ func Initialize(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	
+
 	// Creates the HEAD file
 	headPath := dir + "/HEAD"
 	head, err := os.Create(headPath)

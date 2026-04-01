@@ -10,11 +10,8 @@ import (
 var initCmd = &cobra.Command {
 	Use: "init",
 	Short: "Initialize .git",
-	Run: internal.Initialize,
-	// RunE: func(cmd *cobra.Command, args []string) error {
-	// 	fmt.Println("Init Tester")
-	// 	return nil
-	// },
+	// Run: internal.Initialize,
+	Run: internal.Hashing,
 }
 
 var addCmd = &cobra.Command{
