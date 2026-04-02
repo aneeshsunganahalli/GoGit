@@ -9,6 +9,7 @@ import (
 
 // const indexPath = ".gogit/index.json"
 
+// Loads the JSON from the .gogit/index.json file
 func LoadIndex(indexPath string) map[string]IndexEntry {
 
 	data, err := os.ReadFile(indexPath)
@@ -58,9 +59,10 @@ func UpdateIndexFromPath(targetPath string) {
 
 			existingEntry, exists := index[path]
 
-			// objectStored := ObjectExistsInStorage(existingEntry.Hash)
 
 			if !exists {
+
+				WriteObject("blob", string(content))
 
 				fmt.Println("Entry not found in index, so we create one entry.")
 				index[path] = IndexEntry{
@@ -70,15 +72,16 @@ func UpdateIndexFromPath(targetPath string) {
 					Hash:     newHash,
 					Mode:     mode,
 				}
-			}
+			} else {
 
-			// WriteObject()
+				WriteObject("blob", string(content))
 
-			if existingEntry.Hash != newHash {
+				if existingEntry.Hash != newHash {
 
-				entry := index[path]
-				entry.Hash = newHash
-				index[path] = entry
+					entry := index[path]
+					entry.Hash = newHash
+					index[path] = entry
+				}
 			}
 		}
 
@@ -101,6 +104,7 @@ func UpdateIndexFromPath(targetPath string) {
 
 }
 
+// Writes the JSON to .gogit/index.json
 func writeIndex(indexPath string, index map[string]IndexEntry) error {
 	data, err := json.MarshalIndent(index, "", "")
 	if err != nil {
@@ -110,17 +114,18 @@ func writeIndex(indexPath string, index map[string]IndexEntry) error {
 	return os.WriteFile(indexPath, data, 0755)
 }
 
+
+// Checks if object exists in storage, but I am programming above function to be in storage when we encounter a hash, so this is redudant
 func ObjectExistsInStorage(hash string) bool {
-	dir := hash[:2]
-	file := hash[2:]
+	dir, file := hash[:2], hash[2:]
 
 	objectPath := filepath.Join(objectFolder, dir, file)
 	fmt.Println(objectPath)
+
 	info, err := os.Stat(objectPath)
 	if err == nil && !info.IsDir() {
 		return true
-	} else {
-	return false
 	}
-}
 
+	return false
+}

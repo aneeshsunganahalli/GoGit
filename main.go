@@ -1,10 +1,9 @@
 package main
 
 import (
-	// "fmt"
 
 	"github.com/aneeshsunganahalli/GoGit/cmd"
-	"github.com/aneeshsunganahalli/GoGit/internal"
+	// "github.com/aneeshsunganahalli/GoGit/internal"
 )
 
 func main() {
@@ -15,5 +14,7 @@ func main() {
 	// fmt.Println(str[:2])
 	// internal.WriteObject("blob", "Hello Worlds")
 	// internal.LoadIndex(".gogit/index.json")
-	internal.RecursiveWalk("./cmd")
+	// internal.UpdateIndexFromPath("./cmd")
+	// b := internal.ObjectExistsInStorage("bb3cf8320db49d4a79e3b4ba36c7ac4ffade0a45")
+	// fmt.Println(b)
 }

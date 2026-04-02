@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	// "fmt"
-
-	"fmt"
-
+	
 	"github.com/aneeshsunganahalli/GoGit/internal"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +18,8 @@ var addCmd = &cobra.Command{
 	Short: "Testing adding changes",
 	Args: cobra.ExactArgs(1) ,
 	RunE: func(cmd *cobra.Command, args []string) error {
-			// path := args[0]
+			path := args[0]
+			internal.UpdateIndexFromPath(path)
 		// internal.WriteObject()
 		return nil
 	},
@@ -29,10 +27,4 @@ var addCmd = &cobra.Command{
 
 func init(){
 	rootCmd.AddCommand(initCmd, addCmd)
-}
-
-// helloooo worlssdsdsjfhfuahfuf
-
-func random(){
-	fmt.Println("Everything")
 }
