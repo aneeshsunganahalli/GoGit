@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-const objectPath = ".gogit/objects/"
+const objectFolder = ".gogit/objects/"
 
 // Writes the object into the .gogit/objects/ folder in the format: object/sd/j8k4... for storage
 func WriteObject(objectType string, content string) string {
@@ -21,7 +21,7 @@ func WriteObject(objectType string, content string) string {
 	dir := hashStr[:2]
 	file := hashStr[2:]
 
-	path := filepath.Join(objectPath, dir)
+	path := filepath.Join(objectFolder, dir)
 
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
@@ -42,7 +42,7 @@ func WriteObject(objectType string, content string) string {
 	return hashStr // You'll need this to keep track of what you have saved
 }
 
-func AddToIndex(path string) {
-	
+func Add() {
+
 }
 

@@ -29,13 +29,13 @@ func LoadIndex(indexPath string) map[string]IndexEntry {
 	return index
 }
 
-func RecursiveWalk(start string) {
+func UpdateIndexFromPath(targetPath string) {
 
 	indexPath := ".gogit/index.json"
 	index := LoadIndex(indexPath)
 	seenFiles := make(map[string]bool)
 
-	err := filepath.WalkDir(start, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(targetPath, func(path string, d os.DirEntry, err error) error {
 
 		if err != nil || d.IsDir() {
 			return err
@@ -46,14 +46,21 @@ func RecursiveWalk(start string) {
 
 		mtime, size := index[path].Mtime, index[path].Size
 
-
 		if info.Size() != size || info.ModTime().Unix() != mtime {
 
 			content, _ := os.ReadFile(path)
 			newHash := GenerateHash("blob", string(content))
 
-			existingEntry, ok := index[path]
-			if !ok {
+			mode := 100644
+			if info.Mode()&0111 != 0 {
+				mode = 100755
+			}
+
+			existingEntry, exists := index[path]
+
+			// objectStored := ObjectExistsInStorage(existingEntry.Hash)
+
+			if !exists {
 
 				fmt.Println("Entry not found in index, so we create one entry.")
 				index[path] = IndexEntry{
@@ -61,11 +68,14 @@ func RecursiveWalk(start string) {
 					Size:     info.Size(),
 					Mtime:    info.ModTime().Unix(),
 					Hash:     newHash,
-					Mode:     120000,
+					Mode:     mode,
 				}
 			}
 
+			// WriteObject()
+
 			if existingEntry.Hash != newHash {
+
 				entry := index[path]
 				entry.Hash = newHash
 				index[path] = entry
@@ -99,3 +109,18 @@ func writeIndex(indexPath string, index map[string]IndexEntry) error {
 
 	return os.WriteFile(indexPath, data, 0755)
 }
+
+func ObjectExistsInStorage(hash string) bool {
+	dir := hash[:2]
+	file := hash[2:]
+
+	objectPath := filepath.Join(objectFolder, dir, file)
+	fmt.Println(objectPath)
+	info, err := os.Stat(objectPath)
+	if err == nil && !info.IsDir() {
+		return true
+	} else {
+	return false
+	}
+}
+
