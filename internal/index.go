@@ -31,67 +31,59 @@ func LoadIndex(indexPath string) map[string]IndexEntry {
 
 func RecursiveWalk(start string) {
 
-	// indexPath := ""
-	index := LoadIndex(".gogit/index.json")
+	indexPath := ".gogit/index.json"
+	index := LoadIndex(indexPath)
 	seenFiles := make(map[string]bool)
 
 	err := filepath.WalkDir(start, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
+
+		if err != nil || d.IsDir() {
 			return err
 		}
 
+		seenFiles[path] = true
+		info, _ := os.Stat(path)
 
-		if !d.IsDir() {
-			// fileName := filepath.Base(path)
-			seenFiles[path] = true
+		mtime, size := index[path].Mtime, index[path].Size
 
-			info, err := os.Stat(path)
-			if err != nil {
-				fmt.Println("Error with getting stats")
+
+		if info.Size() != size || info.ModTime().Unix() != mtime {
+
+			content, _ := os.ReadFile(path)
+			newHash := GenerateHash("blob", string(content))
+
+			existingEntry, ok := index[path]
+			if !ok {
+
+				fmt.Println("Entry not found in index, so we create one entry.")
+				index[path] = IndexEntry{
+					Filename: filepath.Base(path),
+					Size:     info.Size(),
+					Mtime:    info.ModTime().Unix(),
+					Hash:     newHash,
+					Mode:     120000,
+				}
 			}
 
-			mtime, size := index[path].Mtime, index[path].Size
-			if info.Size() != size || info.ModTime().Unix() != mtime {
-
-				content, err := os.ReadFile(path)
-				if err != nil {
-					fmt.Println("Error reading content from file")
-				}
-
-				newHash := GenerateHash("blob", string(content))
-
-				existingEntry, ok := index[path]
-				if !ok {
-					fmt.Println("Entry not found in index, so we create one entry.")
-					index[path] = IndexEntry{
-						Filename: filepath.Base(path),
-						Size: info.Size(),
-						Mtime: info.ModTime().Unix(),
-						Hash: newHash,
-						Mode: 120000,
-					}
-				}
-
-				if existingEntry.Hash != newHash {
-					entry := index[path]
-
-					entry.Hash = newHash
-
-					index[path] = entry
-				}
+			if existingEntry.Hash != newHash {
+				entry := index[path]
+				entry.Hash = newHash
+				index[path] = entry
 			}
 		}
 
 		return nil
 	})
 
-		for path := range index {
-			if seenFiles[path] == false {
+	for path := range index {
+		if seenFiles[path] == false {
+			if _, err := os.Stat(path); os.IsNotExist(err) {
 				delete(index, path)
 			}
 		}
+	}
 
-		writeIndex(".gogit/index.json", index)
+	writeIndex(".gogit/index.json", index)
 
 	if err != nil {
 		panic(err)
@@ -107,4 +99,3 @@ func writeIndex(indexPath string, index map[string]IndexEntry) error {
 
 	return os.WriteFile(indexPath, data, 0755)
 }
-
