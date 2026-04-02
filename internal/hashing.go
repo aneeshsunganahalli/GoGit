@@ -19,7 +19,9 @@ func Hashing(cmd *cobra.Command, args []string) {
 }
 
 // Creates the SHA-1 and encodes it to create key essentially
-func ObjectHashing(store string) string{
+func GenerateHash(objectType string, content string) string{
+
+	store := GenerateStore(objectType, content)
 	
 	hash := sha1.Sum([]byte(store))
 	hashStr := hex.EncodeToString(hash[:])
@@ -40,4 +42,12 @@ func ZlibCompresser(input string) ([]byte, error) {
 
 	w.Close()
 	return b.Bytes(), nil
+}
+
+// Generates the header and the store
+func GenerateStore(objectType string, content string) string {
+	header := fmt.Sprintf("%s %d\x00", objectType, len(content))
+	store := header + content
+
+	return store
 }

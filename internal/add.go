@@ -8,13 +8,12 @@ import (
 
 const objectPath = ".gogit/objects/"
 
-// Writes the object into the .gogit/objects/ folder in the format: object/sd/j8k4... 
-func WriteObject(objectType string, content string) {
+// Writes the object into the .gogit/objects/ folder in the format: object/sd/j8k4... for storage
+func WriteObject(objectType string, content string) string {
 	
-	header := fmt.Sprintf("%s %d\x00", objectType, len(content))
-	store := header + content
+	store := GenerateStore(objectType, content)
 
-	hashStr := ObjectHashing(store)
+	hashStr := GenerateHash(objectType, content)
 	fmt.Println(hashStr)
 	compressedContent, err := ZlibCompresser(store)
 
@@ -39,5 +38,11 @@ func WriteObject(objectType string, content string) {
 	defer objFile.Close()
 
 	os.WriteFile(fileName, compressedContent, 0755)
+
+	return hashStr // You'll need this to keep track of what you have saved
+}
+
+func AddToIndex(path string) {
+	
 }
 

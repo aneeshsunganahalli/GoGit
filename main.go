@@ -13,5 +13,7 @@ func main() {
 	// str := internal.ObjectHashing("Hello")
 	// fmt.Println(str)
 	// fmt.Println(str[:2])
-	internal.WriteObject("blob", "Hello Worlds")
+	// internal.WriteObject("blob", "Hello Worlds")
+	// internal.LoadIndex(".gogit/index.json")
+	internal.RecursiveWalk("./cmd")
 }

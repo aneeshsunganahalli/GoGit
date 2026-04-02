@@ -32,8 +32,6 @@ func Initialize(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	
-
 	// Creates the HEAD file
 	headPath := dir + "/HEAD"
 	head, err := os.Create(headPath)
@@ -43,6 +41,15 @@ func Initialize(cmd *cobra.Command, args []string) {
 	defer head.Close()
 
 	head.WriteString("refs:refs/heads/main")
+
+	indexPath := dir + "/index.json"
+	index, err := os.Create(indexPath)
+	if err != nil {
+		panic(err)
+	}
+	defer index.Close()
+
+	index.WriteString("{}")
 
 	fmt.Println("Initialized empty repository")	
 }

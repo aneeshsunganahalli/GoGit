@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	// "fmt"
+
 	"fmt"
 
 	"github.com/aneeshsunganahalli/GoGit/internal"
@@ -15,14 +17,22 @@ var initCmd = &cobra.Command {
 }
 
 var addCmd = &cobra.Command{
-	Use:   "add",
+	Use:   "add [path]",
 	Short: "Testing adding changes",
+	Args: cobra.ExactArgs(1) ,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Add Tester")
+			// path := args[0]
+		// internal.WriteObject()
 		return nil
 	},
 }
 
 func init(){
 	rootCmd.AddCommand(initCmd, addCmd)
+}
+
+// helloooo worlssdsdsjfhfuahfuf
+
+func random(){
+	fmt.Println("Everything")
 }
