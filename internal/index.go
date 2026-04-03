@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
 )
 
 // const indexPath = ".gogit/index.json"
@@ -24,9 +26,9 @@ func LoadIndex(indexPath string) map[string]IndexEntry {
 		fmt.Println("Failed to unmarshal the json")
 	}
 
-	prettyJSON, err := json.MarshalIndent(index, "", "  ")
+	// prettyJSON, err := json.MarshalIndent(index, "", "  ")
 
-	fmt.Println(string(prettyJSON))
+	// fmt.Println(string(prettyJSON))
 	return index
 }
 
@@ -41,48 +43,39 @@ func UpdateIndexFromPath(targetPath string) {
 		if err != nil || d.IsDir() {
 			return err
 		}
-
-		seenFiles[path] = true
+		cleanedPath := filepath.ToSlash(path)
+		seenFiles[cleanedPath] = true
 		info, _ := os.Stat(path)
 
-		mtime, size := index[path].Mtime, index[path].Size
+		existingEntry, exists := index[path]
 
-		if info.Size() != size || info.ModTime().Unix() != mtime {
+		if exists && existingEntry.Size == info.Size() && existingEntry.Mtime == info.ModTime().Unix() {
+			return nil
+		}
 
-			content, _ := os.ReadFile(path)
-			newHash := GenerateHash("blob", string(content))
+		content, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Printf("Error reading content from %s", path)
+			return nil
+		}
+		newHash := GenerateHash("blob", string(content))
 
-			mode := 100644
-			if info.Mode()&0111 != 0 {
-				mode = 100755
-			}
+		mode := 100644
+		if info.Mode()&0111 != 0 {
+			mode = 100755
+		}
 
-			existingEntry, exists := index[path]
+		if !ObjectExistsInStorage(newHash) {
+			// fmt.Printf("Creating new object: %s\n", newHash)
+			WriteObject("blob", string(content))
+		}
 
-
-			if !exists {
-
-				WriteObject("blob", string(content))
-
-				fmt.Println("Entry not found in index, so we create one entry.")
-				index[path] = IndexEntry{
-					Filename: filepath.Base(path),
-					Size:     info.Size(),
-					Mtime:    info.ModTime().Unix(),
-					Hash:     newHash,
-					Mode:     mode,
-				}
-			} else {
-
-				WriteObject("blob", string(content))
-
-				if existingEntry.Hash != newHash {
-
-					entry := index[path]
-					entry.Hash = newHash
-					index[path] = entry
-				}
-			}
+		index[path] = IndexEntry{
+			Filename: filepath.Base(path),
+			Size:     info.Size(),
+			Mtime:    info.ModTime().Unix(),
+			Hash:     newHash,
+			Mode:     mode,
 		}
 
 		return nil
@@ -98,8 +91,10 @@ func UpdateIndexFromPath(targetPath string) {
 
 	writeIndex(".gogit/index.json", index)
 
+	PrintTrie(BuildTrie(index), "")
+
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 }
@@ -114,13 +109,17 @@ func writeIndex(indexPath string, index map[string]IndexEntry) error {
 	return os.WriteFile(indexPath, data, 0755)
 }
 
-
 // Checks if object exists in storage, but I am programming above function to be in storage when we encounter a hash, so this is redudant
 func ObjectExistsInStorage(hash string) bool {
+
+	if len(hash) < 40 { // Git SHA-1 is 40 chars
+        return false
+    }
+		
 	dir, file := hash[:2], hash[2:]
 
 	objectPath := filepath.Join(objectFolder, dir, file)
-	fmt.Println(objectPath)
+	// fmt.Println(objectPath)
 
 	info, err := os.Stat(objectPath)
 	if err == nil && !info.IsDir() {
@@ -129,3 +128,43 @@ func ObjectExistsInStorage(hash string) bool {
 
 	return false
 }
+
+// Builds a temp trie
+func BuildTrie(index map[string]IndexEntry) *TrieNode {
+
+	root := &TrieNode{
+		Children: make(map[string]*TrieNode),
+		Mode:     40000,
+	}
+
+	for path, entry := range index {
+		parts := strings.Split(path, "/")
+		current := root
+
+		for idx, part := range parts {
+
+			// It's a file
+			if idx == len(parts)-1 {
+				current.Children[part] = &TrieNode{
+					Hash:   entry.Hash,
+					Mode:   entry.Mode,
+					IsFile: true,
+				}
+			} else { // It's a directory
+				if _, exists := current.Children[part]; !exists {
+					current.Children[part] = &TrieNode{
+						Children: make(map[string]*TrieNode),
+						IsFile:   false,
+						Mode:     40000,
+					}
+				}
+			}
+			current = current.Children[part]
+		}
+
+	}
+
+	return root
+}
+
+

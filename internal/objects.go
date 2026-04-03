@@ -11,6 +11,10 @@ type IndexEntry struct {
 	Filename string
 }
 
-type Tree struct {
-	Entries []IndexEntry
+// Temporary Trie Structure Node
+type TrieNode struct {
+	Children map[string]*TrieNode // Only for directories, since files can't have children
+	Hash string
+	Mode int
+	IsFile bool
 }
