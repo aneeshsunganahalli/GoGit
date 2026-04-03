@@ -292,6 +292,7 @@ func writeObject(objectType string, size int64, r io.Reader) (string, error) {
 		fmt.Println("File already exists")
 	}
 
+	fmt.Println(hashStr)
 	return hashStr, err
 }
 
