@@ -45,6 +45,8 @@ func GoGitInit(cmd *cobra.Command, args []string) {
 		fmt.Println("Failed to write HEAD: ", err)
 	}
 
+	GetAuthorDetails()
+
 	fmt.Println("Initialized empty repository")
 }
 
