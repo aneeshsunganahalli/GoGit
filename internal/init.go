@@ -3,29 +3,29 @@ package internal
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
 
 func Initialize(cmd *cobra.Command, args []string) {
-	
+
 	// Creates the .gogit directory
 	dir := ".gogit"
-	err := os.Mkdir(dir, 0777)
-	if err != nil {
-		fmt.Println(err)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Println("failed to create .gogit:", err)
 		return
 	}
 
 	subfolders := []string{
-		"/hooks",
-		"/refs",
-		"/info",
-		"/objects",
+		"hooks",
+		"refs",
+		"info",
+		"objects",
 	}
 
 	for _, subf := range subfolders {
-		err = os.MkdirAll(dir + subf, 0777)
+		err := os.MkdirAll(filepath.Join(dir, subf), 0775)
 		if err != nil {
 			fmt.Println("Error creating subfolders in .gogit")
 			return
@@ -34,22 +34,16 @@ func Initialize(cmd *cobra.Command, args []string) {
 
 	// Creates the HEAD file
 	headPath := dir + "/HEAD"
-	head, err := os.Create(headPath)
+	err := os.WriteFile(headPath, []byte("refs:refs/heads/main\n"), 0644)
 	if err != nil {
-		panic(err)
+		fmt.Println("Failed to write HEAD: ", err)
 	}
-	defer head.Close()
 
-	head.WriteString("refs:refs/heads/main")
-
-	indexPath := dir + "/index.json"
-	index, err := os.Create(indexPath)
+	indexPath := filepath.Join(dir, "index.json")
+	err = os.WriteFile(indexPath, []byte("{}\n"), 0644)
 	if err != nil {
-		panic(err)
+		fmt.Println("Failed to write HEAD: ", err)
 	}
-	defer index.Close()
 
-	index.WriteString("{}")
-
-	fmt.Println("Initialized empty repository")	
+	fmt.Println("Initialized empty repository")
 }

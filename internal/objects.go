@@ -14,7 +14,9 @@ type IndexEntry struct {
 // Temporary Trie Structure Node
 type TrieNode struct {
 	Children map[string]*TrieNode // Only for directories, since files can't have children
-	Hash string
+	Hash []byte
 	Mode int
+	Exists bool
+	IsDirty bool
 	IsFile bool
 }

@@ -6,17 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-
-	"github.com/spf13/cobra"
 )
-
-func Hashing(cmd *cobra.Command, args []string) {
-
-	h := sha1.Sum([]byte("Some Random Content"))
-
-	hashStr := hex.EncodeToString(h[:])
-	fmt.Println(hashStr)
-}
 
 // Creates the SHA-1 and encodes it to create key essentially
 func GenerateHash(objectType string, content string) string{
