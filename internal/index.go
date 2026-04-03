@@ -1,12 +1,14 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
-
 )
 
 // const indexPath = ".gogit/index.json"
@@ -91,7 +93,10 @@ func UpdateIndexFromPath(targetPath string) {
 
 	writeIndex(".gogit/index.json", index)
 
-	PrintTrie(BuildTrie(index), "")
+	root := BuildTrie(index)
+	PrintTrie(root, "")
+
+	root.WriteMerkleTree()
 
 	if err != nil {
 		fmt.Println(err)
@@ -115,7 +120,7 @@ func ObjectExistsInStorage(hash string) bool {
 	if len(hash) < 40 { // Git SHA-1 is 40 chars
         return false
     }
-		
+
 	dir, file := hash[:2], hash[2:]
 
 	objectPath := filepath.Join(objectFolder, dir, file)
@@ -168,3 +173,43 @@ func BuildTrie(index map[string]IndexEntry) *TrieNode {
 }
 
 
+func (n *TrieNode) WriteMerkleTree() string {
+
+	// Base Case: We have a file, so we get its hash
+	if n.IsFile {
+		return n.Hash
+	}
+
+	// For Merkle Trees, you have to sort the children alphabetically work it to work properly
+	keys := make([]string, 0, len(n.Children))
+	for name := range n.Children {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+
+
+	var treeBuffer bytes.Buffer
+
+	for _, name := range keys {
+		child := n.Children[name]
+
+		// Need to obtain the child's hash
+		childHash := child.WriteMerkleTree()
+
+		// We need the binary, not hex encoded hash string for the Merkle tree
+		// We use binary hash for the content, we do not hex encode it
+		binaryHash, _ := hex.DecodeString(childHash)
+
+
+		// [Mode] [Name][Null Byte][Binary Hash]
+		treeBuffer.WriteString(fmt.Sprintf("%d %s\x00", child.Mode, name))
+		treeBuffer.Write(binaryHash)
+	}
+
+	// Write the tree object into the .gogit/objects folder
+	content := treeBuffer.String()
+	n.Hash = WriteObject("tree", content)
+	fmt.Println("Hash: ", n.Hash) // Here we take the encoded hash, since it's for object storage
+
+	return n.Hash
+}

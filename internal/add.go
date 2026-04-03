@@ -29,13 +29,13 @@ func WriteObject(objectType string, content string) string {
 	}
 
 	// File Creation
-	fileName := path + "/" + file
-	objFile, err := os.Create(fileName)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to write object at %s: %v", path, err))
-	}
+	fileName := filepath.Join(path, file)
+	// objFile, err := os.Create(fileName)
+	// if err != nil {
+	// 	panic(fmt.Sprintf("Failed to write object at %s: %v", path, err))
+	// }
 
-	defer objFile.Close()
+	// defer objFile.Close()
 
 	os.WriteFile(fileName, compressedContent, 0755)
 
