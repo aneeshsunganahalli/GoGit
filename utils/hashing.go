@@ -1,4 +1,4 @@
-package internal
+package utils
 
 import (
 	"bytes"
@@ -18,7 +18,6 @@ func GenerateHash(objectType string, content string) string{
 
 	return hashStr
 }
-
 
 // Zlib compresses the content into raw binary
 func ZlibCompresser(input string) ([]byte, error) {
