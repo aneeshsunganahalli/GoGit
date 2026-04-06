@@ -53,7 +53,7 @@ func writeIndex(indexPath string, index map[string]IndexEntry) error {
 }
 
 
-func updateIndex(targetPath string, index map[string]IndexEntry, root *TrieNode) (map[string]bool, error) {
+func updateIndex(targetPath string, index map[string]IndexEntry) (map[string]bool, error) {
 	seenFiles := make(map[string]bool)
 
 	err := filepath.WalkDir(targetPath, func(path string, d os.DirEntry, err error) error {
@@ -101,7 +101,6 @@ func updateIndex(targetPath string, index map[string]IndexEntry, root *TrieNode)
 		}
 
 		index[cleanedPath] = newEntry
-		root.MarkPath(cleanedPath, newEntry)
 
 		return nil
 	})

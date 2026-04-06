@@ -55,30 +55,20 @@ func GoGitAdd(targetPath string) {
 	indexPath := ".gogit/index.json"
 	index := LoadIndex(indexPath)
 
-	root := &TrieNode{Children: make(map[string]*TrieNode), Mode: 40000, IsDirty: true}
 
-	for path, entry := range index {
-		root.LoadPath(path, entry)
-	}
-
-	seenFiles, err := updateIndex(targetPath, index, root)
+	seenFiles, err := updateIndex(targetPath, index)
 
 	for path := range index {
 		if seenFiles[path] == false {
 			if _, err := os.Stat(filepath.FromSlash(path)); os.IsNotExist(err) {
 				delete(index, path)
-				root.RemovePath(path)
+				// root.RemovePath(path)
 			}
 		}
 	}
 
 	writeIndex(".gogit/index.json", index)
-
-	// root := BuildTrie(index)
-	PrintTrie(root, "")
-
-	root.WriteMerkleTree()
-
+	
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -154,3 +144,8 @@ func GoGitAdd(targetPath string) {
 
 // 	return hashStr, os.Rename(tempFile.Name(), finalPath)
 // }
+
+
+func main() {
+	
+}
