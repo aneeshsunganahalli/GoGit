@@ -58,46 +58,6 @@ func CreateAndStoreCommit(treeHash string, parentHash string, message string) st
 	return hash
 }
 
-func Commit(message string) {
-	indexPath := ".gogit/index.json"
-	index := LoadIndex(indexPath)
-
-	root := &TrieNode{Children: make(map[string]*TrieNode), Mode: 40000, IsDirty: true}
-
-	for path, entry := range index {
-		root.LoadPath(path, entry)
-	}
-
-	// PrintTrie(root, "") 
-	rootHash := string(root.WriteMerkleTree())
-
-	parentTreeHash, err := GetHeadTreeHash()
-
-	if rootHash == parentTreeHash {
-		fmt.Println("On branch main")
-		fmt.Println("nothing to commit, working tree clean")
-	}
-
-	parentHash, err := GetParentHash()
-
-	commitHash := CreateAndStoreCommit(rootHash, parentHash, message)
-
-	refDir := filepath.Join(".gogit", "refs", "heads") 
-	refPath := filepath.Join(refDir, "main")
-
-		err = os.MkdirAll(refDir, 0755)
-		if err != nil {
-			fmt.Println("Error creating refs/heads directory")
-			return 
-		}
-
-		if err = os.WriteFile(refPath, []byte(commitHash), 0755); err != nil {
-			fmt.Println("Error writing to refs/heads/main")
-			return
-		}
-
-}
-
 // Obtains parent commit hash, using the file HEAD points to, usually refs/head/main
 func GetParentHash() (string, error) {
 
@@ -154,3 +114,21 @@ func GetHeadTreeHash() (string, error) {
 
 	return "", fmt.Errorf("Tree hash not found in commit")
 } 
+
+func ParseCommit(content []byte) CommitObject {
+    lines := strings.Split(string(content), "\n")
+    c := CommitObject{}
+    for _, line := range lines {
+        if strings.HasPrefix(line, "tree ") {
+            c.TreeHash = strings.TrimPrefix(line, "tree ")
+        } else if strings.HasPrefix(line, "parent ") {
+            c.ParentHash = strings.TrimPrefix(line, "parent ")
+        } else if strings.HasPrefix(line, "author ") {
+					c.Author = strings.TrimPrefix(line, "author ")
+					c.Committer = c.Author
+				} else if strings.HasPrefix(line, "author ") {
+					c.Author = strings.TrimPrefix(line, "author ")
+				}
+    }
+    return c
+}

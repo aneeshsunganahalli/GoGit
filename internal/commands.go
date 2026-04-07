@@ -75,6 +75,46 @@ func GoGitAdd(targetPath string) {
 
 }
 
+func GoGitCommit(message string) {
+	indexPath := ".gogit/index.json"
+	index := LoadIndex(indexPath)
+
+	root := &TrieNode{Children: make(map[string]*TrieNode), Mode: 40000, IsDirty: true}
+
+	for path, entry := range index {
+		root.LoadPath(path, entry)
+	}
+
+	// PrintTrie(root, "") 
+	rootHash := string(root.WriteMerkleTree())
+
+	parentTreeHash, err := GetHeadTreeHash()
+
+	if rootHash == parentTreeHash {
+		fmt.Println("On branch main")
+		fmt.Println("nothing to commit, working tree clean")
+	}
+
+	parentHash, err := GetParentHash()
+
+	commitHash := CreateAndStoreCommit(rootHash, parentHash, message)
+
+	refDir := filepath.Join(".gogit", "refs", "heads") 
+	refPath := filepath.Join(refDir, "main")
+
+		err = os.MkdirAll(refDir, 0755)
+		if err != nil {
+			fmt.Println("Error creating refs/heads directory")
+			return 
+		}
+
+		if err = os.WriteFile(refPath, []byte(commitHash), 0755); err != nil {
+			fmt.Println("Error writing to refs/heads/main")
+			return
+		}
+
+}
+
 // Archive, previous implementation of writeObject()
 
 // Writes the object into the .gogit/objects/ folder in the format: object/sd/j8k4... for storage
