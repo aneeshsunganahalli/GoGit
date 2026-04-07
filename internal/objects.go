@@ -20,3 +20,13 @@ type TrieNode struct {
 	IsDirty bool
 	IsFile bool
 }
+
+type CommitObject struct {
+	TreeHash string
+	ParentHash string
+	Author string
+	Committer string
+	Timestamp int64
+	Timezone string
+	Message string
+}

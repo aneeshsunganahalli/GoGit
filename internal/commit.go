@@ -16,30 +16,46 @@ import (
 
 // [Your commit message here]
 
+func (c *CommitObject) ConvertToString() string {
+	var output strings.Builder
+
+	output.WriteString(fmt.Sprintf("tree %s\n", c.TreeHash))
+	fmt.Println(c.TreeHash)
+
+
+
+	// Could be first commit, so no parent hash
+	if c.ParentHash != "" {
+		output.WriteString(fmt.Sprintf("parent %s\n", c.ParentHash))
+	}
+
+	output.WriteString(fmt.Sprintf("author %s %d %s\n", c.Author, c.Timestamp, c.Timezone))
+	output.WriteString(fmt.Sprintf("committer %s %d %s\n", c.Author, c.Timestamp, c.Timezone))
+	output.WriteString(fmt.Sprintf("\n%s\n", c.Message))
+
+	return output.String()
+}
+
 func CreateAndStoreCommit(treeHash string, parentHash string, message string) string {
 
 	name, email, _ := GetAuthorDetails()
-
-	author := fmt.Sprintf("%s <%s>", name, email)
+	authorInfo := fmt.Sprintf("%s <%s>", name, email)
 
 	timestamp := time.Now().Unix()
 	_, offset := time.Now().Zone()
 	timezone := fmt.Sprintf("%+03d%02d", offset/3600, (offset%3600)/60)
 
-	var commitBody strings.Builder
-
-	commitBody.WriteString(fmt.Sprintf("tree %s\n", treeHash))
-
-	// Could be first commit, so no parent hash
-	if parentHash != "" {
-		commitBody.WriteString(fmt.Sprintf("parent %s\n", parentHash))
+	c := CommitObject{
+		TreeHash: treeHash,
+		ParentHash: parentHash,
+		Author: authorInfo,
+		Committer: authorInfo,
+		Timestamp: timestamp,
+		Timezone: timezone,
+		Message: message,
 	}
 
-	commitBody.WriteString(fmt.Sprintf("author %s %d %s\n", author, timestamp, timezone))
-	commitBody.WriteString(fmt.Sprintf("committer %s %d %s\n", author, timestamp, timezone))
-	commitBody.WriteString(fmt.Sprintf("\n%s\n", message))
-
-	commit := commitBody.String()
+	commit := c.ConvertToString()
 	hash, _ := writeObject("commit", int64(len(commit)), strings.NewReader(commit))
 
 	return hash
@@ -110,3 +126,6 @@ func GetParentHash() string {
 
 	return string(hash)
 }
+
+
+func GetCommitHash() 
