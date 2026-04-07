@@ -1,13 +1,14 @@
 package internal
 
-
 import (
+	"bytes"
 	"compress/zlib"
 	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Checks if object exists in storage, but I am programming above function to be in storage when we encounter a hash, so this is redudant
@@ -30,9 +31,7 @@ func ObjectExistsInStorage(hash string) bool {
 	return false
 }
 
-
-
-
+// Writes the content into .gogit/objects
 func writeObject(objectType string, size int64, r io.Reader) (string, error) {
 
 	tempDir := filepath.Join(".gogit", "tmp")
@@ -79,6 +78,44 @@ func writeObject(objectType string, size int64, r io.Reader) (string, error) {
 		fmt.Println("File already exists")
 	}
 
-	fmt.Println(hashStr)
+	fmt.Println("Hash: ", hashStr)
 	return hashStr, err
+}
+
+func readObject(hash string) (string, []byte, error){
+	dir, file := hash[:2], hash[2:]
+	objPath := filepath.Join(".gogit/objects", dir, file)
+
+	f, err := os.Open(objPath)
+	if err != nil {
+		fmt.Println("Error reading file")
+		return "", nil, err
+	}
+	defer f.Close()
+
+	zr, err := zlib.NewReader(f)
+	if err != nil {
+		fmt.Println("Error creating zlib reader")
+		return "", nil, err
+	}
+	defer zr.Close()
+
+	rawContent, err := io.ReadAll(zr)
+	if err != nil {
+		fmt.Println("Error reading object file")
+		return "", nil, err
+	}
+
+	parts := bytes.SplitN(rawContent, []byte{0}, 2)
+	if len(parts) < 2 {
+        return "", nil, fmt.Errorf("invalid object format")
+    }
+
+		header := string(parts[0])
+		typeAndSize := strings.Split(header, " ")
+		objectType := typeAndSize[0]
+		content := parts[1]
+	
+
+	return objectType, content, nil
 }

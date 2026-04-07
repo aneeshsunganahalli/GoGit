@@ -20,9 +20,6 @@ func (c *CommitObject) ConvertToString() string {
 	var output strings.Builder
 
 	output.WriteString(fmt.Sprintf("tree %s\n", c.TreeHash))
-	fmt.Println(c.TreeHash)
-
-
 
 	// Could be first commit, so no parent hash
 	if c.ParentHash != "" {
@@ -71,17 +68,24 @@ func Commit(message string) {
 		root.LoadPath(path, entry)
 	}
 
-	PrintTrie(root, "")
-	rootHash := root.WriteMerkleTree()
+	// PrintTrie(root, "") 
+	rootHash := string(root.WriteMerkleTree())
 
-	parentHash := GetParentHash()
+	parentTreeHash, err := GetHeadTreeHash()
 
-	commitHash := CreateAndStoreCommit(string(rootHash), parentHash, message)
+	if rootHash == parentTreeHash {
+		fmt.Println("On branch main")
+		fmt.Println("nothing to commit, working tree clean")
+	}
+
+	parentHash, err := GetParentHash()
+
+	commitHash := CreateAndStoreCommit(rootHash, parentHash, message)
 
 	refDir := filepath.Join(".gogit", "refs", "heads") 
 	refPath := filepath.Join(refDir, "main")
 
-		err := os.MkdirAll(refDir, 0755)
+		err = os.MkdirAll(refDir, 0755)
 		if err != nil {
 			fmt.Println("Error creating refs/heads directory")
 			return 
@@ -95,12 +99,12 @@ func Commit(message string) {
 }
 
 // Obtains parent commit hash, using the file HEAD points to, usually refs/head/main
-func GetParentHash() string {
+func GetParentHash() (string, error) {
 
 	headContent, err := os.ReadFile(".gogit/HEAD")
 	if err != nil {
 		fmt.Println("Cannot read HEAD")
-		return ""
+		return "", err
 	}
 
 	content := strings.TrimSpace(string(headContent))
@@ -111,21 +115,42 @@ func GetParentHash() string {
 		refPath = filepath.Join(".gogit", relPath)
 		} else {
 			// Detached HEAD contains hash
-			return content
+			return content, nil
 		}
 
 	if _, err := os.Stat(refPath); os.IsNotExist(err) {
 			fmt.Println("No parent hash, this is the first commit")
-			return ""
+			return "", err
 	}
 
 	hash, err := os.ReadFile(refPath)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	return string(hash)
+	return string(hash), nil
 }
 
+// Obtains the tree hash from the parent commit, so we can avoid empty commits from happening
+func GetHeadTreeHash() (string, error) {
+	headHash, err := GetParentHash()
+	if err != nil {
+		fmt.Println("Error reading hash from HEAD")
+		return "", err
+	}
 
-func GetCommitHash() 
+	_ , content, err := readObject(headHash)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "tree "){
+			return strings.TrimPrefix(line, "tree "), nil
+		}
+	}
+
+	return "", fmt.Errorf("Tree hash not found in commit")
+} 
