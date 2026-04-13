@@ -9,6 +9,7 @@ import (
 )
 
 // Commit should look like this
+
 // tree [40-char-hex-root-tree-hash]
 // parent [40-char-hex-parent-commit-hash]
 // author Aneesh <aneesh@example.com> 1775151513 +0530
@@ -58,8 +59,8 @@ func CreateAndStoreCommit(treeHash string, parentHash string, message string) st
 	return hash
 }
 
-// Obtains parent commit hash, using the file HEAD points to, usually refs/head/main
-func GetParentHash() (string, error) {
+// Obtains latest commit hash, using the file HEAD points to, usually refs/head/main
+func GetHeadHash() (string, error) {
 
 	headContent, err := os.ReadFile(".gogit/HEAD")
 	if err != nil {
@@ -68,6 +69,9 @@ func GetParentHash() (string, error) {
 	}
 
 	content := strings.TrimSpace(string(headContent))
+	if content == "" {
+		return "", nil
+	}
 	var refPath string
 
 	if strings.HasPrefix(content, "refs:") {
@@ -80,7 +84,7 @@ func GetParentHash() (string, error) {
 
 	if _, err := os.Stat(refPath); os.IsNotExist(err) {
 			fmt.Println("No parent hash, this is the first commit")
-			return "", err
+			return "", nil
 	}
 
 	hash, err := os.ReadFile(refPath)
@@ -88,16 +92,20 @@ func GetParentHash() (string, error) {
 		return "", err
 	}
 
-	return string(hash), nil
+	return strings.TrimSpace(string(hash)), nil
 }
 
-// Obtains the tree hash from the parent commit, so we can avoid empty commits from happening
+// Obtains the tree hash from the latest commit, so we can avoid empty commits from happening
 func GetHeadTreeHash() (string, error) {
-	headHash, err := GetParentHash()
+	headHash, err := GetHeadHash()
 	if err != nil {
 		fmt.Println("Error reading hash from HEAD")
 		return "", err
 	}
+
+	if headHash == "" {
+    return "", nil
+  }
 
 	_ , content, err := readObject(headHash)
 	if err != nil {
@@ -132,3 +140,5 @@ func ParseCommit(content []byte) CommitObject {
     }
     return c
 }
+
+
