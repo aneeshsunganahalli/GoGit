@@ -30,3 +30,10 @@ type CommitObject struct {
 	Timezone string
 	Message string
 }
+
+type LogData struct {
+		hash       string
+		authorLine string
+		message    []string
+	}
+	

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -55,7 +56,6 @@ func GoGitAdd(targetPath string) {
 	indexPath := ".gogit/index.json"
 	index := LoadIndex(indexPath)
 
-
 	seenFiles, err := updateIndex(targetPath, index)
 
 	for path := range index {
@@ -68,7 +68,7 @@ func GoGitAdd(targetPath string) {
 	}
 
 	writeIndex(".gogit/index.json", index)
-	
+
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -85,34 +85,90 @@ func GoGitCommit(message string) {
 		root.LoadPath(path, entry)
 	}
 
-	// PrintTrie(root, "") 
+	// PrintTrie(root, "")
 	rootHash := string(root.WriteMerkleTree())
 
 	parentTreeHash, err := GetHeadTreeHash()
 
-	if rootHash == parentTreeHash {
-		fmt.Println("On branch main")
-		fmt.Println("nothing to commit, working tree clean")
+	if err == nil && parentTreeHash != "" {
+		if rootHash == parentTreeHash {
+			fmt.Println("On branch main")
+			fmt.Println("nothing to commit, working tree clean")
+			return // <--- CRITICAL: Stop here!
+		}
 	}
 
-	parentHash, err := GetParentHash()
+	parentHash, err := GetHeadHash()
 
 	commitHash := CreateAndStoreCommit(rootHash, parentHash, message)
 
-	refDir := filepath.Join(".gogit", "refs", "heads") 
+	refDir := filepath.Join(".gogit", "refs", "heads")
 	refPath := filepath.Join(refDir, "main")
 
-		err = os.MkdirAll(refDir, 0755)
+	err = os.MkdirAll(refDir, 0755)
+	if err != nil {
+		fmt.Println("Error creating refs/heads directory")
+		return
+	}
+
+	if err = os.WriteFile(refPath, []byte(commitHash), 0755); err != nil {
+		fmt.Println("Error writing to refs/heads/main")
+		return
+	}
+
+}
+
+func GoGitLog() error {
+	// Get latest commit hash from HEAD
+	currentHash, err := GetHeadHash()
+	if err != nil {
+		fmt.Println("Error reading hash from HEAD")
+		return err
+	}
+
+	var history []LogData
+
+	for currentHash != "" {
+		_, content, err := readObject(currentHash)
 		if err != nil {
-			fmt.Println("Error creating refs/heads directory")
-			return 
+			fmt.Println(err)
+			return err
 		}
 
-		if err = os.WriteFile(refPath, []byte(commitHash), 0755); err != nil {
-			fmt.Println("Error writing to refs/heads/main")
-			return
-		}
+		lines := strings.Split(string(content), "\n")
+		var c LogData
+		nextHash := ""
+		isMessage := false
 
+		for _, line := range lines {
+
+			if isMessage {
+				c.message = append(c.message, line)
+				continue
+			}
+			// If line is blank, remaining part is the message
+			if line == "" {
+				isMessage = true
+				continue
+			}
+
+			if strings.HasPrefix(line, "parent ") {
+				nextHash = strings.TrimPrefix(line, "parent ")
+			} else if strings.HasPrefix(line, "author ") {
+				c.authorLine = strings.TrimPrefix(line, "author ")
+			}
+		}
+		c.hash = currentHash
+		history = append(history, c)
+		currentHash = nextHash
+	}
+
+	for i := len(history) - 1; i >= 0; i-- {
+		commit := history[i]
+		FormatLog(commit.hash, commit.authorLine, commit.message, i == len(history) - 1)
+	}
+
+	return nil
 }
 
 // Archive, previous implementation of writeObject()
@@ -185,7 +241,6 @@ func GoGitCommit(message string) {
 // 	return hashStr, os.Rename(tempFile.Name(), finalPath)
 // }
 
-
 func main() {
-	
+
 }

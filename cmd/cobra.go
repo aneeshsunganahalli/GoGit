@@ -34,6 +34,15 @@ var commitCmd = &cobra.Command{
 	},
 }
 
+var logCmd = &cobra.Command{
+	Use: "log",
+	Short: "Shows all commits till HEAD",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := internal.GoGitLog()
+		return err
+	},
+}
+
 func init(){
-	rootCmd.AddCommand(initCmd, addCmd, commitCmd)
+	rootCmd.AddCommand(initCmd, addCmd, commitCmd, logCmd)
 }
