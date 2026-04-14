@@ -43,6 +43,17 @@ var logCmd = &cobra.Command{
 	},
 }
 
+var branchCmd = &cobra.Command{
+	Use: "branch [branch-name]",
+	Short: "Creates a new branch at the current commit",
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		branchName := args[0]
+		err := internal.CreateBranch(branchName)
+		return err
+	},
+}
+
 func init(){
-	rootCmd.AddCommand(initCmd, addCmd, commitCmd, logCmd)
+	rootCmd.AddCommand(initCmd, addCmd, commitCmd, logCmd, branchCmd)
 }
