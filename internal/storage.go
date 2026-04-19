@@ -83,6 +83,11 @@ func writeObject(objectType string, size int64, r io.Reader) (string, error) {
 }
 
 func readObject(hash string) (string, []byte, error){
+
+	if len(hash) < 40 {
+        return "", nil, fmt.Errorf("invalid hash: '%s'", hash)
+    }
+		
 	dir, file := hash[:2], hash[2:]
 	objPath := filepath.Join(".gogit/objects", dir, file)
 
