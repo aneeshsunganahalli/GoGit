@@ -2,9 +2,11 @@ package internal
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -121,4 +123,86 @@ func BuildTrie(index map[string]IndexEntry) *TrieNode {
 	}
 
 	return root
+}
+
+func ParseTreeEntry(data []byte) (name string, node *TrieNode, hashEnd int, err error) {
+    // 1. Find the space: format is "[Mode] [Name]\x00[Hash]"
+    spaceIdx := bytes.IndexByte(data, ' ')
+    if spaceIdx == -1 {
+        return "", nil, 0, fmt.Errorf("invalid entry: no space found")
+    }
+    modeStr := string(data[:spaceIdx])
+
+    // 2. Find the Null Byte (\x00) after the name
+    nullIdx := bytes.IndexByte(data[spaceIdx:], 0)
+    if nullIdx == -1 {
+        return "", nil ,0, fmt.Errorf("invalid entry: no null terminator")
+    }
+    // nullIdx is relative to data[spaceIdx:], so we add spaceIdx
+    absoluteNullIdx := spaceIdx + nullIdx
+    name = string(data[spaceIdx+1 : absoluteNullIdx])
+
+    // 3. The 20 bytes immediately following the Null Byte
+    hashStart := absoluteNullIdx + 1
+    hashEnd = hashStart + 20
+    
+    if hashEnd > len(data) {
+        return "", nil, 0, fmt.Errorf("invalid entry: data too short for hash")
+    }
+
+    hash := make([]byte, 20)
+    copy(hash, data[hashStart:hashEnd])
+
+    // 4. Construct the node
+    mode, _ := strconv.ParseInt(modeStr, 8, 32)
+    node = &TrieNode{
+        Hash:     hash,
+        Mode:     int(mode),
+        Children: make(map[string]*TrieNode),
+        IsFile:   (mode != 040000), // In Git, 040000 is a Directory
+    }
+
+    return name, node, hashEnd, nil
+}
+
+// func cleanWorkingDirectory(oldIndex, currIndex map[string]IndexEntry) {
+// 	for filePath := range oldIndex {
+// 		if _, exists := currIndex[filePath]; !exists {
+// 			// File is tracked in current branch, but not in the target branch
+// 			err := os.Remove(filePath)
+// 			if err != nil && !os.IsNotExist(err) {
+// 				fmt.Printf("Warning: failed to remove stale file %s: %v\n", filePath, err)
+// 			}
+// 		}
+// 	}
+// }
+
+func cleanWorkingDirectory(oldIndex map[string]IndexEntry, newIndex map[string]IndexEntry) {
+	fmt.Println("\n--- Cleanup Phase Debug ---")
+	
+	// Show what we loaded from the current branch
+	fmt.Printf("oldIndex has %d items:\n", len(oldIndex))
+	for k := range oldIndex {
+		fmt.Printf("  - %s\n", k)
+	}
+
+	// Show what we built from the target branch
+	fmt.Printf("\nnewIndex has %d items:\n", len(newIndex))
+	for k := range newIndex {
+		fmt.Printf("  - %s\n", k)
+	}
+
+	fmt.Println("\nStarting Deletions:")
+	for filePath := range oldIndex {
+		if _, exists := newIndex[filePath]; !exists {
+			fmt.Printf(" -> Target branch doesn't have '%s'. DELETING...\n", filePath)
+			err := os.Remove(filePath)
+			if err != nil && !os.IsNotExist(err) {
+				fmt.Printf("    [!] Failed to remove %s: %v\n", filePath, err)
+			}
+		} else {
+			fmt.Printf(" -> Target branch has '%s'. Keeping.\n", filePath)
+		}
+	}
+	fmt.Println("---------------------------\n")
 }

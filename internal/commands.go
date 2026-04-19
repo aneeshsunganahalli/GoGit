@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,9 +87,11 @@ func GoGitCommit(message string) {
 	}
 
 	// PrintTrie(root, "")
-	rootHash := string(root.WriteMerkleTree())
+	rootHash := hex.EncodeToString(root.WriteMerkleTree())
+	fmt.Println(rootHash)
 
 	parentTreeHash, err := GetHeadTreeHash()
+	fmt.Println(parentTreeHash)
 
 	if err == nil && parentTreeHash != "" {
 		if rootHash == parentTreeHash {
@@ -102,8 +105,18 @@ func GoGitCommit(message string) {
 
 	commitHash := CreateAndStoreCommit(rootHash, parentHash, message)
 
+	currentBranch := "main" // fallback
+	headContent, err := os.ReadFile(".gogit/HEAD")
+	if err == nil {
+		headStr := strings.TrimSpace(string(headContent))
+		
+		if strings.HasPrefix(headStr, "refs:refs/heads/") {
+			currentBranch = strings.TrimPrefix(headStr, "refs:refs/heads/")
+		}
+	}
+
 	refDir := filepath.Join(".gogit", "refs", "heads")
-	refPath := filepath.Join(refDir, "main")
+	refPath := filepath.Join(refDir, currentBranch)
 
 	err = os.MkdirAll(refDir, 0755)
 	if err != nil {
@@ -112,7 +125,7 @@ func GoGitCommit(message string) {
 	}
 
 	if err = os.WriteFile(refPath, []byte(commitHash), 0755); err != nil {
-		fmt.Println("Error writing to refs/heads/main")
+		fmt.Printf("Error writing to refs/heads/%s", currentBranch)
 		return
 	}
 
@@ -165,82 +178,45 @@ func GoGitLog() error {
 
 	for i := len(history) - 1; i >= 0; i-- {
 		commit := history[i]
-		FormatLog(commit.hash, commit.authorLine, commit.message, i == len(history) - 1)
+		FormatLog(commit.hash, commit.authorLine, commit.message, i == len(history)-1)
 	}
 
 	return nil
 }
 
-// Archive, previous implementation of writeObject()
+func GoGitStatus() {
+	indexPath := ".gogit/index.json"
+	index := LoadIndex(indexPath)
 
-// Writes the object into the .gogit/objects/ folder in the format: object/sd/j8k4... for storage
-// func WriteObject(objectType string, content string) string {
+	root := &TrieNode{Children: make(map[string]*TrieNode), Mode: 40000, IsDirty: true}
 
-// 	store := GenerateStore(objectType, content)
-
-// 	hashStr := GenerateHash(objectType, content)
-// 	fmt.Println(hashStr)
-// 	compressedContent, err := ZlibCompresser(store)
-
-// 	// Directory Creation
-// 	dir := hashStr[:2]
-// 	file := hashStr[2:]
-
-// 	path := filepath.Join(objectFolder, dir)
-
-// 	err = os.MkdirAll(path, 0644)
-// 	if err != nil {
-// 		panic(fmt.Sprintf("Failed to create directory at %s: %v", path, err))
-// 	}
-
-// 	// File Creation
-// 	fileName := filepath.Join(path, file)
-
-// 	os.WriteFile(fileName, compressedContent, 0644)
-
-// 	return hashStr // You'll need this to keep track of what you have saved
-// }
-
-// func writeObject(objectType string, size int64, r io.Reader) (string, error) {
-// 	tempFile, err := os.CreateTemp("", "gogit-obj-*")
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	defer os.Remove(tempFile.Name())
-// 	defer tempFile.Close()
-
-// 	hasher := sha1.New()
-// 	header := fmt.Sprintf("%s %d\x00", objectType, size)
-
-// 	zlibWriter := zlib.NewWriter(tempFile)
-// 	multiWriter := io.MultiWriter(hasher, zlibWriter)
-
-// 	multiWriter.Write([]byte(header))
-
-// 	if _ ,err := io.Copy(multiWriter, r); err != nil {
-// 		return "", err
-// 	}
-
-// 	zlibWriter.Close()
-
-// 	hashStr := fmt.Sprintf("%x", hasher.Sum(nil))
-
-// 	dir, file := hashStr[:2], hashStr[2:]
-// 	finalDir := filepath.Join(".gogit", "objects", dir)
-// 	finalPath := filepath.Join(finalDir, file)
-
-// 	if _, err := os.Stat(finalPath); err == nil {
-// 		return hashStr, nil
-// 	}
-
-// 	if err := os.MkdirAll(finalDir, 0755); err != nil {
-// 		return "", err
-// 	}
-
-// 	return hashStr, os.Rename(tempFile.Name(), finalPath)
-// }
-
-func main() {
-
+	ShowStatus(index, root)
 }
+
+func GoGitCheckout(branch string) error {
+
+	commitHash, err := ResolvePointer(branch)
+	if err != nil || commitHash == "" {
+        return fmt.Errorf("error: branch or commit '%s' not found", branch)
+    }
+	treeHash, err := GetTreeHashFromCommit(commitHash)
+	if err != nil {
+        return fmt.Errorf("error: could not find tree for commit %s: %v", commitHash, err)
+    }
+
+	oldIndex := LoadIndex(".gogit/index.json")
+
+	newIndex := make(map[string]IndexEntry)
+
+	RestoreFromTree(treeHash, ".", newIndex)
+
+	cleanWorkingDirectory(oldIndex, newIndex)
+
+	writeIndex(".gogit/index.json", newIndex)
+	updateHEAD(branch, commitHash)
+
+	fmt.Printf("Switched to branch '%s'\n", branch)
+
+	return nil
+}
+

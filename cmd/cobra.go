@@ -54,6 +54,26 @@ var branchCmd = &cobra.Command{
 	},
 }
 
+var statusCmd = &cobra.Command{
+	Use: "status",
+	Short: "Checks the current branch and staged changes",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		internal.GoGitStatus()
+		return nil
+	},
+}
+
+var checkoutCmd = &cobra.Command{
+	Use: "checkout [branch]",
+	Short: "Checks out a branch and replaces working directory",
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		branch := args[0]
+		err := internal.GoGitCheckout(branch)
+		return err
+	},
+}
+
 func init(){
-	rootCmd.AddCommand(initCmd, addCmd, commitCmd, logCmd, branchCmd)
+	rootCmd.AddCommand(initCmd, addCmd, commitCmd, logCmd, branchCmd, statusCmd, checkoutCmd)
 }
