@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,8 +13,10 @@ func FormatLog(currentHash string, authorLine string, message []string, isFirstC
 	// 1. Print Commit Hash
 	fmt.Printf("\033[33mcommit %s\033[0m", currentHash)
 
+	branch, _ := getBranchName()
+
 	if isFirstCommit {
-		fmt.Print(" \033[1;36m(\033[1;34mHEAD -> \033[1;32mmain\033[1;36m)\033[0m")
+		fmt.Printf(" \033[1;36m(\033[1;34mHEAD -> \033[1;32m%s\033[1;36m)\033[0m", branch)
 	}
 	fmt.Println()
 
@@ -34,7 +37,7 @@ func FormatLog(currentHash string, authorLine string, message []string, isFirstC
 		fmt.Printf("Date:   %s %s\n", dateStr, timezone)
 
 	}
-	// 3. Print Commit Message
+
 	fmt.Println("")
 	for _, m := range message {
 		if m != "" {
@@ -42,4 +45,24 @@ func FormatLog(currentHash string, authorLine string, message []string, isFirstC
 		}
 	}
 	fmt.Println("")
+}
+
+func getBranchName() (string, error) {
+	headContent, err := os.ReadFile(".gogit/HEAD")
+	if err != nil {
+		fmt.Println("Cannot read HEAD")
+		return "", err
+	}
+
+	content := strings.TrimSpace(string(headContent))
+	if content == "" {
+		return "", nil
+	}
+	var branch string
+
+	if strings.HasPrefix(content, "refs:refs/heads") {
+		branch = strings.TrimPrefix(content, "refs:refs/heads/")
+	} 
+
+	return branch, err
 }

@@ -204,5 +204,5 @@ func cleanWorkingDirectory(oldIndex map[string]IndexEntry, newIndex map[string]I
 			fmt.Printf(" -> Target branch has '%s'. Keeping.\n", filePath)
 		}
 	}
-	fmt.Println("---------------------------\n")
+	fmt.Println("---------------------------")
 }
